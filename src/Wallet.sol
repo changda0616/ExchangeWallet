@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 contract Wallet {
     address public owner;
-    uint private constant THRESHOLD = 2;
-    uint private recoveryCount;
-    uint private recoveryStarted;
-    uint private cooldownEnd;
-    uint private constant RECOVERY_PERIOD = 1 days;
-    uint private constant COOLDOWN_PERIOD = 3 days;
-    mapping(address => bool) private recoveryAddresses;
+    uint private _recoveryCount;
+    uint private _recoveryStarted;
+    uint private _cooldownEnd;
+    uint private constant _RECOVER_THRESHOLD = 2;
+    uint private constant _RECOVERY_PERIOD = 1 days;
+    uint private constant _COOLDOWN_PERIOD = 3 days;
+    mapping(address => bool) private _recoveryAddresses;
 
     event Deposit(address indexed _from, uint _value);
     event Withdrawal(address indexed _to, uint _value);
@@ -36,7 +36,7 @@ contract Wallet {
     }
 
     function isRecoveryAddress(address account) public view returns (bool) {
-        return recoveryAddresses[account];
+        return _recoveryAddresses[account];
     }
 
     function checkBalance() public view returns (uint) {
@@ -46,37 +46,37 @@ contract Wallet {
 
     function addRecoveryAddress(address _recoveryAddress) public {
         require(msg.sender == owner, "Only owner can add recovery address");
-        recoveryAddresses[_recoveryAddress] = true;
+        _recoveryAddresses[_recoveryAddress] = true;
         emit RecoveryAddressAdded(_recoveryAddress);
     }
 
     function removeRecoveryAddress(address _recoveryAddress) public {
         require(msg.sender == owner, "Only owner can remove recovery address");
-        delete recoveryAddresses[_recoveryAddress];
+        delete _recoveryAddresses[_recoveryAddress];
         emit RecoveryAddressRemoved(_recoveryAddress);
     }
 
     function startRecovery() public {
-        require(recoveryAddresses[msg.sender], "Not a recovery address");
-        require(block.timestamp > cooldownEnd, "Recovery is in cooldown");
-        recoveryStarted = block.timestamp;
-        cooldownEnd = block.timestamp + COOLDOWN_PERIOD;
-        recoveryCount = 1;
+        require(_recoveryAddresses[msg.sender], "Not a recovery address");
+        require(block.timestamp > _cooldownEnd, "Recovery is in cooldown");
+        _recoveryStarted = block.timestamp;
+        _cooldownEnd = block.timestamp + _COOLDOWN_PERIOD;
+        _recoveryCount = 1;
         emit RecoveryStarted(msg.sender);
     }
 
     function confirmRecovery() public {
-        require(recoveryAddresses[msg.sender], "Not a recovery address");
+        require(_recoveryAddresses[msg.sender], "Not a recovery address");
         require(
-            block.timestamp <= recoveryStarted + RECOVERY_PERIOD,
+            block.timestamp <= _recoveryStarted + _RECOVERY_PERIOD,
             "Recovery period has ended"
         );
-        recoveryCount++;
+        _recoveryCount++;
         emit RecoveryAddressConfirmed(msg.sender);
-        if (recoveryCount >= THRESHOLD) {
+        if (_recoveryCount >= _RECOVER_THRESHOLD) {
             address oldOwner = owner;
             owner = msg.sender;
-            recoveryCount = 0;
+            _recoveryCount = 0;
             emit OwnerRecovered(oldOwner, owner);
         }
     }
