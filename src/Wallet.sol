@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+// Owner: EOA
 contract Wallet {
     address public owner;
     uint private _recoveryCount;

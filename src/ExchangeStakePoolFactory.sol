@@ -4,13 +4,14 @@ pragma solidity ^0.8.19;
 import "./ExchangeStakePool.sol";
 import "./ExchangeManage.sol";
 
+// Owner: Protocol
 contract ExchangeStakePoolFactory {
     ExchangeManage public exchangeManage;
     mapping(address => address) public exchangeToPool;
     mapping(address => bool) public poolList;
     event PoolInit(address indexed exchange, address indexed pool);
 
-    constructor(address _exchangeManage, address) {
+    constructor(address _exchangeManage) {
         exchangeManage = ExchangeManage(_exchangeManage);
     }
 

@@ -2,9 +2,8 @@
 pragma solidity ^0.8.19;
 
 import "openzeppelin/token/ERC20/IERC20.sol";
-import "openzeppelin/access/Ownable.sol";
 
-contract ExchangeStakePool is Ownable {
+contract ExchangeStakePool {
     IERC20 public token;
     mapping(address => uint256) public userStakes;
 

@@ -2,8 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "openzeppelin/token/ERC20/IERC20.sol";
+import "openzeppelin/access/Ownable.sol";
 
-contract MakeOrder {
+// Owner: Exchange wallet
+contract MakeOrder is Ownable {
     struct Order {
         address trader;
         IERC20 baseToken;
@@ -15,8 +17,8 @@ contract MakeOrder {
     uint256 public orderCount = 0;
 
     mapping(uint256 => Order) public orders;
-    mapping(address => mapping(address => uint256)) public liabilities;
     
+    mapping(address => mapping(address => uint256)) public liabilities;
 
     event OrderPlaced(
         uint256 indexed id,
@@ -28,14 +30,10 @@ contract MakeOrder {
         address indexed trader,
         uint256 indexed price
     );
-    
-    event OrderCancelled(
-        uint256 indexed id,
-        address indexed trader
-    );
+
+    event OrderCancelled(uint256 indexed id, address indexed trader);
 
     function placeOrder(
-        address trader,
         IERC20 baseToken,
         IERC20 quoteToken,
         uint256 amount,
@@ -51,7 +49,7 @@ contract MakeOrder {
         );
 
         orders[orderCount] = Order({
-            trader: trader,
+            trader: msg.sender,
             baseToken: baseToken,
             quoteToken: quoteToken,
             amount: amount,
@@ -69,7 +67,7 @@ contract MakeOrder {
         orderCount++;
     }
 
-    function executeOrder(uint256 id) public {
+    function executeOrder(uint256 id) public onlyOwner {
         Order storage order = orders[id];
         require(order.executed == false, "Order already executed");
         require(
@@ -93,8 +91,8 @@ contract MakeOrder {
         Order storage order = orders[id];
         require(order.executed == false, "Order already executed or cancelled");
         require(
-            msg.sender == order.trader,
-            "Order can only be cancelled by the trader"
+            msg.sender == order.trader || msg.sender == owner(),
+            "Order can only be cancelled by the trader or the owner"
         );
 
         order.executed = true;
