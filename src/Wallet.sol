@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "./Proxy/Delegate.sol";
 
 // Owner: EOA
-contract Wallet is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract Wallet is Delegate {
     uint private _recoveryCount;
     uint private _recoveryStarted;
     uint private _cooldownEnd;
@@ -27,14 +25,6 @@ contract Wallet is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     constructor() {
         _disableInitializers();
     }
-
-    function initialize() public initializer {
-        _transferOwnership(msg.sender);
-    }
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal virtual override onlyOwner {}
 
     receive() external payable {
         emit Deposit(msg.sender, msg.value);

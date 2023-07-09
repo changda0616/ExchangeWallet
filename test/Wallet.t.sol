@@ -3,10 +3,10 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Wallet.sol";
-import "../src/Delegator.sol";
+import "../src/Proxy/Delegator.sol";
 
 contract WalletTest is Test {
-    Delegator walletProxy;
+    Delegator delegator;
     Wallet wallet;
 
     address owner = makeAddr("owner");
@@ -37,10 +37,21 @@ contract WalletTest is Test {
 
         vm.deal(owner, INIT_BALANCE);
         vm.startPrank(owner);
-        Wallet walletImplementation = new Wallet();
-        walletProxy = new Delegator(address(walletImplementation), "");
-        wallet = Wallet(payable(address(walletProxy)));
+        Wallet imple = new Wallet();
+        delegator = new Delegator(address(imple), "");
+        wallet = Wallet(payable(address(delegator)));
         wallet.initialize();
+        bytes32 proxySlot = vm.load(address(wallet), IMPL_SLOT);
+        assertEq(
+            bytes32(uint256(uint160(address(imple)))),
+            proxySlot,
+            "Implementation should be set"
+        );
+        assertEq(
+            address(wallet.owner()),
+            address(owner),
+            "Owner should be set"
+        );
         vm.stopPrank();
     }
 

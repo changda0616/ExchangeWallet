@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
-import "openzeppelin/access/Ownable.sol";
+import "./Proxy/Delegate.sol";
 
 // owner: Protocol
-contract ExchangeManage is Ownable {
+contract ExchangeManage is Delegate {
     struct Exchange {
-        address wallet;
         string name;
+        address wallet;
         mapping(address => bool) supportAssets;
     }
 
+    event ExchangeAdded(address indexed wallet, address[] indexed assets);
+    event ExchangeRemoved(address indexed wallet);
+    event SupportedAssetAdded(address indexed wallet, address indexed asset);
+    event SupportedAssetRemoved(address indexed wallet, address indexed asset);
+
     mapping(address => Exchange) public exchanges;
+
+    constructor() {
+        _disableInitializers();
+    }
 
     function addExchange(
         string memory name,
@@ -29,6 +38,7 @@ contract ExchangeManage is Ownable {
         for (uint i = 0; i < assets.length; i++) {
             exchange.supportAssets[assets[i]] = true;
         }
+        emit ExchangeAdded(wallet, assets);
     }
 
     function removeExchange(address wallet) public onlyOwner {
@@ -38,6 +48,7 @@ contract ExchangeManage is Ownable {
         );
 
         delete exchanges[wallet];
+        emit ExchangeRemoved(wallet);
     }
 
     function isExchangeExists(address wallet) public view returns (bool) {
@@ -57,23 +68,34 @@ contract ExchangeManage is Ownable {
         return (exchange.name, exchange.wallet);
     }
 
-    function addSupportedAsset(address wallet, address asset) public {
-        require(exchanges[wallet].wallet != address(0), "Token does not exist");
+    function addSupportedAsset(address asset) public {
+        require(
+            exchanges[msg.sender].wallet != address(0),
+            "Sender is not in the exchange exist"
+        );
 
-        exchanges[wallet].supportAssets[asset] = true;
+        exchanges[msg.sender].supportAssets[asset] = true;
+        emit SupportedAssetAdded(msg.sender, asset);
     }
 
-    function removeSupportedAsset(address wallet, address asset) public {
-        require(exchanges[wallet].wallet != address(0), "Token does not exist");
+    function removeSupportedAsset(address asset) public {
+        require(
+            exchanges[msg.sender].wallet != address(0),
+            "Sender is not in the exchange exist"
+        );
 
-        exchanges[wallet].supportAssets[asset] = false;
+        exchanges[msg.sender].supportAssets[asset] = false;
+        emit SupportedAssetRemoved(msg.sender, asset);
     }
 
     function isAssetSupported(
         address wallet,
         address asset
     ) public view returns (bool) {
-        require(exchanges[wallet].wallet != address(0), "Token does not exist");
+        require(
+            exchanges[wallet].wallet != address(0),
+            "Wallet is not in the exchange exist"
+        );
 
         return exchanges[wallet].supportAssets[asset];
     }
