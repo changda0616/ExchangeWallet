@@ -3,8 +3,10 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Wallet.sol";
+import "../src/Delegator.sol";
 
 contract WalletTest is Test {
+    Delegator walletProxy;
     Wallet wallet;
 
     address owner = makeAddr("owner");
@@ -24,6 +26,9 @@ contract WalletTest is Test {
     event RecoveryAddressAdded(address indexed _recoveryAddress);
     event RecoveryAddressRemoved(address indexed _recoveryAddress);
 
+    bytes32 internal constant IMPL_SLOT =
+        bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1); // 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+
     function setUp() public {
         vm.label(owner, "owner");
         vm.label(recovery1, "recovery1");
@@ -32,8 +37,38 @@ contract WalletTest is Test {
 
         vm.deal(owner, INIT_BALANCE);
         vm.startPrank(owner);
-        wallet = new Wallet();
+        Wallet walletImplementation = new Wallet();
+        walletProxy = new Delegator(address(walletImplementation), "");
+        wallet = Wallet(payable(address(walletProxy)));
+        wallet.initialize();
         vm.stopPrank();
+    }
+
+    function testUpgrade() public {
+        vm.startPrank(owner);
+        Wallet walletImplementation2 = new Wallet();
+        wallet.upgradeTo(address(walletImplementation2));
+        bytes32 proxySlot = vm.load(address(wallet), IMPL_SLOT);
+        assertEq(
+            bytes32(uint256(uint160(address(walletImplementation2)))),
+            proxySlot,
+            "Implementation should be upgraded"
+        );
+    }
+
+    function testUpgradeFailedByNotOwner() public {
+        vm.startPrank(makeAddr("notOwner"));
+        Wallet walletImplementation2 = new Wallet();
+        vm.expectRevert("Ownable: caller is not the owner");
+        wallet.upgradeTo(address(walletImplementation2));
+    }
+
+    function testUpgradeToRandomContractFailed() public {
+        vm.startPrank(owner);
+        address mockContract = makeAddr("contract");
+        vm.etch(mockContract, "");
+        vm.expectRevert();
+        wallet.upgradeTo(address(mockContract));
     }
 
     function testDeposit() public {
@@ -74,7 +109,7 @@ contract WalletTest is Test {
         assertEq(result, true, "Deposit should succeed");
         changePrank(address(this));
         wallet.withdraw(1 ether);
-        vm.expectRevert("Only owner can withdraw");
+        vm.expectRevert("Ownable: caller is not the owner");
     }
 
     function testStartRecovery() public {
@@ -214,7 +249,7 @@ contract WalletTest is Test {
     }
 
     function testRecoveryFailAddressManagementByNotOwner() public {
-        vm.expectRevert("Only owner can add recovery address");
+        vm.expectRevert("Ownable: caller is not the owner");
         wallet.addRecoveryAddress(recovery1);
     }
 }

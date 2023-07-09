@@ -63,7 +63,7 @@ contract MakeOrder is Ownable {
             "Transfer of base token failed"
         );
 
-        emit OrderPlaced(orderCount, trader, price);
+        emit OrderPlaced(orderCount, msg.sender, price);
         orderCount++;
     }
 
