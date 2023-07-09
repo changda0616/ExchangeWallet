@@ -16,7 +16,7 @@ contract ExchangeScript is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 key = vm.envUint("protocal_key");
+        uint256 key = vm.envUint("protocol_key");
         uint256 exchange = vm.envUint("exchange_key");
         address exchangeWallet = vm.envAddress("exchange_wallet");
         vm.startBroadcast(key);
